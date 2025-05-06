@@ -1,0 +1,58 @@
+version: '3.8'
+services:
+  postgres: 
+    image: postgres:13
+    container_name: knovel_postgres
+    network_mode: host
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: userprofile
+  migration:
+    image: flyway/flyway:latest
+    container_name: flyway
+    environment:
+      FLYWAY_URL: jdbc:postgresql://localhost:5432/userprofile
+      FLYWAY_USER: postgres
+      FLYWAY_PASSWORD: password
+    volumes:
+      - ./migrations:/flyway/sql
+    network_mode: host
+    depends_on:
+      - postgres
+    command: ['migrate']
+  userprofile:
+    build: UserProfile/.
+    container_name: userprofile
+    network_mode: host
+    depends_on:
+      - postgres
+    environment:
+      PORT: 8081
+      PG_HOST: localhost
+      PG_PORT: 5432
+      PG_USER: postgres
+      PG_PASSWORD: password
+      PG_DB: userprofile
+      JWT_PUBLIC: ./resources/jwt/public.key
+      JWT_PRIVATE: ./resources/jwt/private.key
+      TASK_CLIENT_KEY: 123
+  tasks:
+    build: Tasks/.
+    container_name: tasks
+    network_mode: host
+    depends_on:
+    - postgres
+    environment:
+      PORT: 8082
+      PG_HOST: localhost
+      PG_PORT: 5432
+      PG_USER: postgres
+      PG_PASSWORD: password
+      PG_DB: tasks
+      AUTHORIZE_CLIENT_PATH: http://localhost:8081/api/v1
+      AUTHORIZE_CLIENT_KEY: 123
+  
+#volumes:
+ # postgres_data:
+  #  driver: local
